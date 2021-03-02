@@ -1,0 +1,12 @@
+{
+  "version": "1.2.1",
+  "description": "Demo Appliance for Tanzu Kubernetes Grid (TKG)",
+  "vm_name": "TKG-Demo-Appliance",
+  "iso_checksum": "341dfbe5321820b1e0b495b21d42235165733f94ac39b959f2bc161313b18bf26ea41d31e277e1d96c0110d897eddee4ede3a2dd9ea94b9dab3d596e8510606a",
+  "iso_checksum_type": "sha512",
+  "iso_url": "https://dl.bintray.com/vmware/photon/3.0/Rev2/iso/Update1/photon-minimal-3.0-a0f216d.iso",
+  "numvcpus": "2",
+  "ramsize": "8096",
+  "guest_username": "root",
+  "guest_password": "VMware1!"
+}

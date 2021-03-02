@@ -1,0 +1,191 @@
+{
+  "min_packer_version": "1.6.3",
+  "variables": {
+    "photon_ovf_template": "photon.xml.template",
+    "ovftool_deploy_vcenter": "192.168.30.3",
+    "ovftool_deploy_vcenter_username": "administrator@vsphere.local",
+    "ovftool_deploy_vcenter_password": "VMware1!"
+  },
+  "builders": [
+    {
+      "type": "vmware-iso",
+      "vm_name": "{{ user `vm_name` }}",
+      "guest_os_type": "Other",
+      "version": "13",
+      "disk_size": "18432",
+      "boot_command": [
+        "<esc><wait>",
+        "vmlinuz initrd=initrd.img root=/dev/ram0 loglevel=3 ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/photon-kickstart.json photon.media=cdrom",
+        "<enter>"
+      ],
+      "boot_wait": "10s",
+      "headless": false,
+      "vnc_over_websocket": true,
+      "insecure_connection": true,
+      "iso_url": "{{ user `iso_url` }}",
+      "iso_checksum": "{{ user `iso_checksum` }}",
+      "http_directory": "http",
+      "remote_type": "esx5",
+      "remote_host": "{{ user `builder_host` }}",
+      "remote_datastore": "{{ user `builder_host_datastore` }}",
+      "remote_username": "{{ user `builder_host_username` }}",
+      "remote_password": "{{ user `builder_host_password` }}",
+      "ssh_username": "{{ user `guest_username` }}",
+      "ssh_password": "{{ user `guest_password` }}",
+      "ssh_port": 22,
+      "format": "ovf",
+      "ovftool_options": [
+        "--parallelThreads=2"
+      ],
+      "shutdown_command": "/sbin/shutdown -h now",
+      "shutdown_timeout": "1000s",
+      "vmx_data": {
+        "numvcpus": "{{ user `numvcpus` }}",
+        "memsize": "{{ user `ramsize` }}",
+        "ethernet0.networkName": "{{ user `builder_host_portgroup` }}",
+        "ethernet0.present": "TRUE",
+        "ethernet0.startConnected": "TRUE",
+        "ethernet0.virtualDev": "vmxnet3",
+        "ethernet0.addressType": "generated",
+        "ethernet0.wakeOnPcktRcv": "FALSE",
+        "annotation": "Version: {{ user `version` }}"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/photon-settings.sh"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/registry.rainpole.io.cert",
+      "destination": "/etc/docker/certs.d/registry.rainpole.io/registry.rainpole.io.cert"
+    },
+    {
+      "type": "file",
+      "source": "files/registry.rainpole.io.key",
+      "destination": "/etc/docker/certs.d/registry.rainpole.io/registry.rainpole.io.key"
+    },
+    {
+      "type": "file",
+      "source": "files/ca.crt",
+      "destination": "/etc/docker/certs.d/registry.rainpole.io/ca.crt"
+    },
+    {
+      "type": "shell",
+      "expect_disconnect" : true,
+      "scripts": [
+        "scripts/photon-docker.sh"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/tkg",
+      "destination": "/usr/local/bin/tkg"
+    },
+    {
+      "type": "file",
+      "source": "files/imgpkg",
+      "destination": "/usr/local/bin/imgpkg"
+    },
+    {
+      "type": "file",
+      "source": "files/kapp",
+      "destination": "/usr/local/bin/kapp"
+    },
+    {
+      "type": "file",
+      "source": "files/kbld",
+      "destination": "/usr/local/bin/kbld"
+    },
+    {
+      "type": "file",
+      "source": "files/ytt",
+      "destination": "/usr/local/bin/ytt"
+    },
+    {
+      "type": "shell",
+      "pause_before": "20s",
+      "scripts": [
+        "scripts/photon-containers.sh",
+        "scripts/photon-harbor.sh",
+        "scripts/photon-cleanup.sh"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/rc.local",
+      "destination": "/etc/rc.d/rc.local"
+    },
+    {
+      "type": "file",
+      "source": "files/setup.sh",
+      "destination": "/root/setup/setup.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/setup-01-os.sh",
+      "destination": "/root/setup/setup-01-os.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/setup-02-proxy.sh",
+      "destination": "/root/setup/setup-02-proxy.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/setup-03-network.sh",
+      "destination": "/root/setup/setup-03-network.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/setup-04-tkg.sh",
+      "destination": "/root/setup/setup-04-tkg.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/setup-09-banner.sh",
+      "destination": "/root/setup/setup-09-banner.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/motd",
+      "destination": "/etc/motd"
+    },
+    {
+      "type": "file",
+      "source": "files/config.yaml",
+      "destination": "/root/config.yaml"
+    },
+    {
+      "type": "file",
+      "source": "files/open_source_license.txt",
+      "destination": "/root/open_source_license.txt"
+    },
+    {
+      "type": "file",
+      "source": "files/crash-diagnostics",
+      "destination": "/usr/local/bin/crash-diagnostics"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "shell-local",
+      "environment_vars": ["PHOTON_VERSION={{ user `version` }}", "PHOTON_APPLIANCE_NAME={{ user `vm_name` }}", "FINAL_PHOTON_APPLIANCE_NAME={{ user `vm_name` }}-{{user `version`}}", "PHOTON_OVF_TEMPLATE={{ user `photon_ovf_template` }}"],
+      "inline": [
+        "cd manual",
+        "./add_ovf_properties.sh"
+      ]
+    },
+    {
+      "type": "shell-local",
+      "inline": [
+        "pwsh -F unregister_vm.ps1 {{ user `ovftool_deploy_vcenter` }} {{ user `ovftool_deploy_vcenter_username` }} {{ user `ovftool_deploy_vcenter_password` }} {{ user `vm_name` }}"
+      ]
+    }
+  ]
+}
+
